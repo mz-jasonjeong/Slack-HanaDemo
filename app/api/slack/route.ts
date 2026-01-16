@@ -1,14 +1,19 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server";
 import dayjs from 'dayjs';
+
+// 환경변수 타입 체크 (없을 경우 에러 방지용)
+const SLACK_BOT_TOKEN = process.env.OAUTH_TOKEN;
+const SLACK_USER_TOKEN = process.env.USER_TOKEN;
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. 요청의 Content-Type 확인
+    // 요청의 Content-Type 확인 (분기 처리의 핵심)
     const contentType = request.headers.get('content-type') || '';
 
-    // =================================================================
-    // [Case A] Slack에서 온 요청 (버튼 클릭 등) - application/x-www-form-urlencoded
-    // =================================================================
+    // =================================================================================
+    // [PART 1] Slack 인터랙션 처리 (버튼 클릭, 모달 제출 등)
+    // Content-Type: application/x-www-form-urlencoded
+    // =================================================================================
     if (contentType.includes('application/x-www-form-urlencoded')) {
       const formData = await request.formData();
       const payloadString = formData.get('payload');
@@ -19,29 +24,35 @@ export async function POST(request: NextRequest) {
 
       const payload = JSON.parse(payloadString);
       const action = payload.actions?.[0]; // 클릭한 버튼 정보
-      const user = payload.user;
+      const user = payload.user;           // 클릭한 사용자 정보
 
-      // 1-1. 모달 제출 (View Submission) 처리
+      // 1-1. 모달(팝업)에서 [등록] 버튼을 눌렀을 때 (View Submission)
       if (payload.type === 'view_submission') {
-        // 의견 등록 모달에서 [등록] 눌렀을 때
-        const docId = payload.view.private_metadata;
-        const opinion = payload.view.state.values.input_opinion_block.input_opinion_action.value;
-        console.log(`[의견등록] 문서ID: ${docId}, 내용: ${opinion}`);
-        return NextResponse.json({ response_action: "clear" }); // 모달 닫기
+        const docId = payload.view.private_metadata; // 숨겨둔 문서 ID
+        // 모달 input block_id와 action_id 구조에 따라 값 추출
+        const opinion = payload.view.state.values.input_opinion_block?.input_opinion_action?.value;
+        
+        console.log(`[의견등록] 문서ID: ${docId}, 작성자: ${user.username}, 내용: ${opinion}`);
+        
+        // 모달을 닫기 위해 clear 액션 반환
+        return NextResponse.json({ response_action: "clear" });
       }
 
-      // 1-2. 버튼 클릭 (Block Actions) 처리
+      // 1-2. 메시지 본문의 버튼 클릭 (Block Actions)
       if (action) {
         switch (action.action_id) {
           case 'btn_accept':
+            // 승인 처리 (메시지 수정)
             return handleApproval(payload, user, '승인');
           
           case 'btn_reject':
+            // 반려 처리 (메시지 수정)
             return handleApproval(payload, user, '반려');
           
           case 'submit_opinion':
-            // 모달 띄우기 (비동기 호출 후 빈 응답 반환)
+            // 의견 등록 모달 띄우기 (API 호출)
             await openOpinionModal(payload.trigger_id, action.value);
+            // Slack에게는 200 OK만 보내면 됨 (화면 변화 없음)
             return NextResponse.json({}, { status: 200 });
         }
       }
@@ -49,38 +60,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({}, { status: 200 });
     }
 
-    // =================================================================
-    // [Case B] 랜딩페이지(V0)에서 온 요청 - application/json
-    // =================================================================
+    // =================================================================================
+    // [PART 2] 웹(V0) 페이지 API 요청 처리
+    // Content-Type: application/json
+    // =================================================================================
     else {
       const body = await request.json();
-
       console.log("Web API received:", body);
+
       let resultMSG = "";
       let resultsuccess = false;
       let resultstatus = 200;
       let response;
 
       switch(body.type){
-        // ... (기존 코드 유지) ...
-        case 'bulk_notification':
-          break;
-        case 'product_info_change':
-          break;
-        
-        // 전자결재 도착
+        // ------------------------------------------------
+        // 2-1. 전자결재 도착 (Slack으로 메시지 발송)
+        // ------------------------------------------------
         case 'approval_arrival':
           response = await fetch('https://slack.com/api/chat.postMessage', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${process.env.SLACK_BOT_TOKEN}`, // 환경변수 이름 확인 필요
+              'Authorization': `Bearer ${SLACK_BOT_TOKEN}`,
             },
             body: JSON.stringify({
-              "channel":"U08KTA9HWQK",
-              "text":"결재문서 도착 대체 메시지",
+              "channel": "U08KTA9HWQK", // 수신자 ID (또는 채널 ID)
+              "text": "결재문서 도착 알림", // 푸시 알림 텍스트
               "blocks": [
-                // ... (기존 Block Kit 코드 그대로 유지) ...
                 {
                   "type": "section",
                   "text": {
@@ -98,6 +105,7 @@ export async function POST(request: NextRequest) {
                     { "type": "mrkdwn", "text": "*사유:*\n연차 사용" }
                   ]
                 },
+                // [버튼 영역 1] 의견 등록
                 {
                   "type": "actions",
                   "elements": [
@@ -105,11 +113,12 @@ export async function POST(request: NextRequest) {
                       "type": "button",
                       "text": { "type": "plain_text", "emoji": true, "text": "의견등록" },
                       "style": "primary",
-                      "value": "docID_123",
+                      "value": "doc_12345", // 문서 ID 예시
                       "action_id": "submit_opinion"
                     }
                   ]
                 },
+                // [버튼 영역 2] 승인 / 반려
                 {
                   "type": "actions",
                   "elements": [
@@ -132,88 +141,121 @@ export async function POST(request: NextRequest) {
               ]
             }),
           });
-          
+
           if (response.ok) {
-            resultsuccess = true;
-            resultMSG = "결재 알림 발송 완료";
-            resultstatus = 200;
+            const data = await response.json();
+            if (data.ok) {
+                resultsuccess = true;
+                resultMSG = "결재 알림 발송 완료";
+            } else {
+                resultsuccess = false;
+                resultMSG = `Slack API Error: ${data.error}`;
+                resultstatus = 500;
+            }
           } else {
             resultsuccess = false;
-            resultMSG = "발송 실패";
+            resultMSG = "Slack API Network Error";
             resultstatus = 500;
           }
           break;
 
-        // 휴가 적용
+        // ------------------------------------------------
+        // 2-2. 휴가 적용 (Slack 상태 메시지 변경)
+        // ------------------------------------------------
         case 'vacation_application':
-          // ... (기존 코드 유지) ...
-           response = await fetch('https://slack.com/api/users.profile.set', {
+          response = await fetch('https://slack.com/api/users.profile.set', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${process.env.SLACK_USER_TOKEN}`, // 환경변수 이름 확인
+              // 상태 변경은 Bot Token이 아니라 User Token이 필요할 수 있음 (권한 주의)
+              'Authorization': `Bearer ${SLACK_USER_TOKEN || SLACK_BOT_TOKEN}`, 
             },
             body: JSON.stringify({
-              user: "U08KTA9HWQK",
+              user: "U08KTA9HWQK", // 대상 사용자 ID
               profile: {
                 status_text : "휴가중",
                 status_emoji : ":palm_tree:",
+                // 내일 23:59:59까지 설정
                 status_expiration : dayjs().add(1, 'day').endOf('day').unix(),
               },
             }),
           });
-           if (response.ok) {
-            resultsuccess = true;
-            resultMSG = "휴가상태 적용 완료";
-            resultstatus = 200;
+          
+          if (response.ok) {
+            const data = await response.json();
+             if (data.ok) {
+                resultsuccess = true;
+                resultMSG = "휴가상태 적용 완료";
+            } else {
+                resultsuccess = false;
+                resultMSG = `Slack Status Error: ${data.error}`;
+                resultstatus = 500;
+            }
           } else {
             resultsuccess = false;
-            resultMSG = "휴가상태 적용 오류";
+            resultMSG = "Slack API Network Error";
             resultstatus = 500;
           }
           break;
 
-        case 'quote_registration':
+        // ------------------------------------------------
+        // 2-3. 기타 기능 (Placeholder)
+        // ------------------------------------------------
+        case 'bulk_notification':
+          resultsuccess = true;
+          resultMSG = "기능 준비중입니다.";
           break;
+        case 'product_info_change':
+          resultsuccess = true;
+          resultMSG = "기능 준비중입니다.";
+          break;
+        case 'quote_registration':
+          resultsuccess = true;
+          resultMSG = "기능 준비중입니다.";
+          break;
+          
+        default:
+          resultsuccess = false;
+          resultMSG = "Unknown Action Type";
+          resultstatus = 400;
       }
 
       return NextResponse.json({ success: resultsuccess, message: resultMSG }, { status: resultstatus });
     }
 
   } catch (error) {
-    console.error("API error:", error);
+    console.error("Server Error:", error);
     return NextResponse.json({ success: false, message: "Internal Server Error" }, { status: 500 });
   }
 }
 
 // =================================================================
-// [Helper 1] 승인/반려 처리 함수
+// [Helper Function 1] 승인/반려 버튼 클릭 시 메시지 수정 로직
 // =================================================================
 function handleApproval(payload: any, user: any, status: string) {
   const statusIcon = status === '승인' ? '✅' : '❌';
   
-  // 기존 메시지 블록 중 "내용" 부분(인덱스 1)을 재사용
-  // (실제 사용 시엔 payload.message.blocks 구조를 보고 인덱스를 조정하세요)
+  // 기존 메시지의 블록 구조를 가져옴 (내용 유지를 위해)
+  // payload.message.blocks[0]: 제목
+  // payload.message.blocks[1]: 상세 필드 정보 (휴가기간 등)
+  // payload.message.blocks[2]: 의견등록 버튼
+  // payload.message.blocks[3]: 승인/반려 버튼
+  
+  const headerBlock = payload.message.blocks[0];
   const infoBlock = payload.message.blocks[1];
 
   return NextResponse.json({
-    replace_original: "true",
-    text: `${statusIcon} ${status} 처리되었습니다.`,
+    replace_original: "true", // 원본 메시지를 덮어씌움
+    text: `${statusIcon} ${status} 처리되었습니다.`, // 모바일 푸시용 텍스트
     blocks: [
-      {
-        "type": "section",
-        "text": {
-          "type": "mrkdwn",
-          "text": `*결재문서 처리 알림*`
-        }
-      },
-      infoBlock, // 기존 문서 정보 유지
+      headerBlock, // 제목 유지
+      infoBlock,   // 상세 정보 유지
       {
         "type": "context",
         "elements": [
           {
             "type": "mrkdwn",
-            "text": `${statusIcon} *${status} 완료* (처리자: <@${user.id}>) | 처리일시: ${new Date().toLocaleString()}`
+            "text": `${statusIcon} *${status} 완료* (처리자: <@${user.id}>) | 처리일시: ${dayjs().format('YYYY-MM-DD HH:mm:ss')}`
           }
         ]
       }
@@ -222,21 +264,21 @@ function handleApproval(payload: any, user: any, status: string) {
 }
 
 // =================================================================
-// [Helper 2] 의견등록 모달 열기 함수
+// [Helper Function 2] 의견 등록 팝업(Modal) 열기 로직
 // =================================================================
 async function openOpinionModal(triggerId: string, docId: string) {
   await fetch('https://slack.com/api/views.open', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.SLACK_BOT_TOKEN}`
+      'Authorization': `Bearer ${SLACK_BOT_TOKEN}`
     },
     body: JSON.stringify({
       trigger_id: triggerId,
       view: {
         type: "modal",
-        callback_id: "view_opinion_submit",
-        private_metadata: docId,
+        callback_id: "view_opinion_submit", // 제출 시 식별자
+        private_metadata: docId, // 문서 ID 전달용
         title: { type: "plain_text", text: "의견 등록" },
         submit: { type: "plain_text", text: "등록" },
         close: { type: "plain_text", text: "취소" },
@@ -247,9 +289,10 @@ async function openOpinionModal(triggerId: string, docId: string) {
             element: {
               type: "plain_text_input",
               action_id: "input_opinion_action",
-              multiline: true
+              multiline: true,
+              placeholder: { type: "plain_text", text: "의견을 입력해주세요." }
             },
-            label: { type: "plain_text", text: "의견 내용" }
+            label: { type: "plain_text", text: "내용" }
           }
         ]
       }

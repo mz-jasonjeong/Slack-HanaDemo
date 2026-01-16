@@ -15,12 +15,18 @@ export async function POST(request: NextRequest) {
     // Content-Type: application/x-www-form-urlencoded
     // =================================================================================
     if (contentType.includes('application/x-www-form-urlencoded')) {
+      console.log("버튼클릭 진입");
+
       const formData = await request.formData();
       const payloadString = formData.get('payload');
 
       if (!payloadString || typeof payloadString !== 'string') {
         return NextResponse.json({ error: 'Bad Request' }, { status: 400 });
       }
+
+      console.log("========== payloadString ==========");
+      console.log(payloadString);
+      console.log("========== payloadString ==========");
 
       const payload = JSON.parse(payloadString);
       const action = payload.actions?.[0]; // 클릭한 버튼 정보

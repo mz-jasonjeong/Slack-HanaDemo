@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     // Content-Type: application/x-www-form-urlencoded
     // =================================================================================
     if (contentType.includes('application/x-www-form-urlencoded')) {
-      console.log("버튼클릭 진입");
+      // console.log("버튼클릭 진입");
 
       const formData = await request.formData();
       const payloadString = formData.get('payload');
@@ -24,9 +24,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Bad Request' }, { status: 400 });
       }
 
-      console.log("========== payloadString ==========");
-      console.log(payloadString);
-      console.log("========== payloadString ==========");
+      // console.log("========== payloadString ==========");
+      // console.log(payloadString);
+      // console.log("========== payloadString ==========");
 
       const payload = JSON.parse(payloadString);
       const action = payload.actions?.[0]; // 클릭한 버튼 정보
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       }
 
       // 1-2. 메시지 본문의 버튼 클릭 (Block Actions)
-      if (action) {
+      if (payload.type === 'block_actions') {
         switch (action.action_id) {
           case 'btn_accept':
             // 승인 처리 (메시지 수정)
@@ -240,7 +240,13 @@ export async function POST(request: NextRequest) {
 // =================================================================
 function handleApproval(payload: any, user: any, status: string) {
   const statusIcon = status === '승인' ? '✅' : '❌';
-  
+  console.log("========== handleApproval 진입 ==========");
+  console.log("========== payload ==========");
+  console.log(payload);
+  console.log("========== user ==========");
+  console.log(user);
+  console.log("========== status ==========");
+  console.log(status);
   // 기존 메시지의 블록 구조를 가져옴 (내용 유지를 위해)
   // payload.message.blocks[0]: 제목
   // payload.message.blocks[1]: 상세 필드 정보 (휴가기간 등)

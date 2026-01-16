@@ -5,6 +5,30 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
+    /*
+    버튼 Action 관련 시작
+    */
+    // 1. Slack 데이터 파싱 (FormData -> JSON)
+    const formData = await request.formData();
+    const payloadString = formData.get('payload');
+
+    console.log("Button Action :", payloadString);
+
+    const payload = JSON.parse(payloadString);
+    const action = payload.actions[0]; // 클릭한 버튼 정보
+    const actionId = action.action_id;
+    const user = payload.user; // 클릭한 사람 정보
+
+    // if (!payloadString || typeof payloadString !== 'string') {
+    //   return NextResponse.json({ error: 'Bad Request' }, { status: 400 });
+    // }
+    /*
+    버튼 Action 관련 종료
+    */
+
+    /*
+    랜딩페이지 버튼 관련 시작
+    */
     // Log the incoming request for debugging
     console.log("Slack API received:", body);
     let resultMSG = "";

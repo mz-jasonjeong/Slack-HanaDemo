@@ -1,13 +1,13 @@
 import { type NextRequest, NextResponse } from "next/server";
 import dayjs from 'dayjs';
 
-// 환경변수 타입 체크 (없을 경우 에러 방지용)
+// 환경변수 타입 체크
 const SLACK_BOT_TOKEN = process.env.OAUTH_TOKEN;
 const SLACK_USER_TOKEN = process.env.USER_TOKEN;
 
 export async function POST(request: NextRequest) {
   try {
-    // 요청의 Content-Type 확인 (분기 처리의 핵심)
+    // 요청의 Content-Type 확인
     const contentType = request.headers.get('content-type') || '';
 
     // =================================================================================
@@ -15,8 +15,6 @@ export async function POST(request: NextRequest) {
     // Content-Type: application/x-www-form-urlencoded
     // =================================================================================
     if (contentType.includes('application/x-www-form-urlencoded')) {
-      // console.log("버튼클릭 진입");
-
       const formData = await request.formData();
       const payloadString = formData.get('payload');
 
@@ -24,23 +22,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Bad Request' }, { status: 400 });
       }
 
-      // console.log("========== payloadString ==========");
-      // console.log(payloadString);
-      // console.log("========== payloadString ==========");
-
       const payload = JSON.parse(payloadString);
       const action = payload.actions?.[0]; // 클릭한 버튼 정보
       const user = payload.user;           // 클릭한 사용자 정보
 
       // 1-1. 모달(팝업)에서 [등록] 버튼을 눌렀을 때 (View Submission)
       if (payload.type === 'view_submission') {
-        const docId = payload.view.private_metadata; // 숨겨둔 문서 ID
-        // 모달 input block_id와 action_id 구조에 따라 값 추출
+        const docId = payload.view.private_metadata; 
         const opinion = payload.view.state.values.input_opinion_block?.input_opinion_action?.value;
         
         console.log(`[의견등록] 문서ID: ${docId}, 작성자: ${user.username}, 내용: ${opinion}`);
         
-        // 모달을 닫기 위해 clear 액션 반환
         return NextResponse.json({ response_action: "clear" });
       }
 
@@ -48,17 +40,18 @@ export async function POST(request: NextRequest) {
       if (payload.type === 'block_actions') {
         switch (action.action_id) {
           case 'btn_accept':
-            // 승인 처리 (메시지 수정)
-            return handleApproval(payload, user, '승인');
+            // [수정됨] await로 비동기 실행 기다림
+            await handleApproval(payload, user, '승인');
+            // [중요] Slack에게는 "응답 받음"만 알리고 종료 (화면 갱신은 handleApproval 내부 API가 처리)
+            return NextResponse.json({}, { status: 200 });
           
           case 'btn_reject':
-            // 반려 처리 (메시지 수정)
-            return handleApproval(payload, user, '반려');
+            // [수정됨] await로 비동기 실행 기다림
+            await handleApproval(payload, user, '반려');
+            return NextResponse.json({}, { status: 200 });
           
           case 'submit_opinion':
-            // 의견 등록 모달 띄우기 (API 호출)
             await openOpinionModal(payload.trigger_id, action.value);
-            // Slack에게는 200 OK만 보내면 됨 (화면 변화 없음)
             return NextResponse.json({}, { status: 200 });
         }
       }
@@ -80,9 +73,7 @@ export async function POST(request: NextRequest) {
       let response;
 
       switch(body.type){
-        // ------------------------------------------------
-        // 2-1. 전자결재 도착 (Slack으로 메시지 발송)
-        // ------------------------------------------------
+        // 2-1. 전자결재 도착
         case 'approval_arrival':
           response = await fetch('https://slack.com/api/chat.postMessage', {
             method: 'POST',
@@ -91,8 +82,8 @@ export async function POST(request: NextRequest) {
               'Authorization': `Bearer ${SLACK_BOT_TOKEN}`,
             },
             body: JSON.stringify({
-              "channel": "U08KTA9HWQK", // 수신자 ID (또는 채널 ID)
-              "text": "결재문서 도착 알림", // 푸시 알림 텍스트
+              "channel": "U08KTA9HWQK", 
+              "text": "결재문서 도착 알림",
               "blocks": [
                 {
                   "type": "section",
@@ -119,7 +110,7 @@ export async function POST(request: NextRequest) {
                       "type": "button",
                       "text": { "type": "plain_text", "emoji": true, "text": "의견등록" },
                       "style": "primary",
-                      "value": "doc_12345", // 문서 ID 예시
+                      "value": "doc_12345",
                       "action_id": "submit_opinion"
                     }
                   ]
@@ -165,23 +156,19 @@ export async function POST(request: NextRequest) {
           }
           break;
 
-        // ------------------------------------------------
-        // 2-2. 휴가 적용 (Slack 상태 메시지 변경)
-        // ------------------------------------------------
+        // 2-2. 휴가 적용
         case 'vacation_application':
           response = await fetch('https://slack.com/api/users.profile.set', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              // 상태 변경은 Bot Token이 아니라 User Token이 필요할 수 있음 (권한 주의)
               'Authorization': `Bearer ${SLACK_USER_TOKEN || SLACK_BOT_TOKEN}`, 
             },
             body: JSON.stringify({
-              user: "U08KTA9HWQK", // 대상 사용자 ID
+              user: "U08KTA9HWQK",
               profile: {
                 status_text : "휴가중",
                 status_emoji : ":palm_tree:",
-                // 내일 23:59:59까지 설정
                 status_expiration : dayjs().add(1, 'day').endOf('day').unix(),
               },
             }),
@@ -204,17 +191,9 @@ export async function POST(request: NextRequest) {
           }
           break;
 
-        // ------------------------------------------------
-        // 2-3. 기타 기능 (Placeholder)
-        // ------------------------------------------------
+        // 2-3. 기타 기능
         case 'bulk_notification':
-          resultsuccess = true;
-          resultMSG = "기능 준비중입니다.";
-          break;
         case 'product_info_change':
-          resultsuccess = true;
-          resultMSG = "기능 준비중입니다.";
-          break;
         case 'quote_registration':
           resultsuccess = true;
           resultMSG = "기능 준비중입니다.";
@@ -236,43 +215,53 @@ export async function POST(request: NextRequest) {
 }
 
 // =================================================================
-// [Helper Function 1] 승인/반려 버튼 클릭 시 메시지 수정 로직
+// [수정됨] 승인/반려 처리 함수 (chat.update API 호출 방식)
 // =================================================================
-function handleApproval(payload: any, user: any, status: string) {
+async function handleApproval(payload: any, user: any, status: string) {
   const statusIcon = status === '승인' ? '✅' : '❌';
-  console.log("========== handleApproval 진입 ==========");
-  console.log("========== payload ==========");
-  console.log(payload);
-  console.log("========== user ==========");
-  console.log(user);
-  console.log("========== status ==========");
-  console.log(status);
-  // 기존 메시지의 블록 구조를 가져옴 (내용 유지를 위해)
-  // payload.message.blocks[0]: 제목
-  // payload.message.blocks[1]: 상세 필드 정보 (휴가기간 등)
-  // payload.message.blocks[2]: 의견등록 버튼
-  // payload.message.blocks[3]: 승인/반려 버튼
-  
+  console.log(`[${status}] 처리 시작 - 사용자: ${user.name}`);
+
+  // 메시지 업데이트를 위해 필요한 정보 추출
+  const channelId = payload.channel.id;
+  const messageTs = payload.message.ts;
+
+  // 기존 메시지 블록 유지
   const headerBlock = payload.message.blocks[0];
   const infoBlock = payload.message.blocks[1];
 
-  return NextResponse.json({
-    replace_original: "true", // 원본 메시지를 덮어씌움
-    text: `${statusIcon} ${status} 처리되었습니다.`, // 모바일 푸시용 텍스트
-    blocks: [
-      headerBlock, // 제목 유지
-      infoBlock,   // 상세 정보 유지
-      {
-        "type": "context",
-        "elements": [
-          {
-            "type": "mrkdwn",
-            "text": `${statusIcon} *${status} 완료* (처리자: <@${user.id}>) | 처리일시: ${dayjs().format('YYYY-MM-DD HH:mm:ss')}`
-          }
-        ]
-      }
-    ]
+  // Slack API 호출 (chat.update)
+  const response = await fetch('https://slack.com/api/chat.update', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SLACK_BOT_TOKEN}` // 반드시 Bot Token 사용
+    },
+    body: JSON.stringify({
+      channel: channelId,
+      ts: messageTs,
+      text: `${statusIcon} ${status} 처리되었습니다.`,
+      blocks: [
+        headerBlock, // 제목 유지
+        infoBlock,   // 상세 정보 유지
+        {
+          "type": "context",
+          "elements": [
+            {
+              "type": "mrkdwn",
+              "text": `${statusIcon} *${status} 완료* (처리자: <@${user.id}>) | 처리일시: ${dayjs().format('YYYY-MM-DD HH:mm:ss')}`
+            }
+          ]
+        }
+      ]
+    })
   });
+
+  const data = await response.json();
+  if (!data.ok) {
+    console.error(`chat.update 실패: ${data.error}`);
+  } else {
+    console.log(`chat.update 성공 (${status})`);
+  }
 }
 
 // =================================================================
@@ -289,8 +278,8 @@ async function openOpinionModal(triggerId: string, docId: string) {
       trigger_id: triggerId,
       view: {
         type: "modal",
-        callback_id: "view_opinion_submit", // 제출 시 식별자
-        private_metadata: docId, // 문서 ID 전달용
+        callback_id: "view_opinion_submit",
+        private_metadata: docId,
         title: { type: "plain_text", text: "의견 등록" },
         submit: { type: "plain_text", text: "등록" },
         close: { type: "plain_text", text: "취소" },

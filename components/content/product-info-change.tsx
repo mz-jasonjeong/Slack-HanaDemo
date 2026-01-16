@@ -57,8 +57,8 @@ export function ProductInfoChange() {
             <FileEdit className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <CardTitle>Product Info Change</CardTitle>
-            <CardDescription>상품정보 변경 - Update product information</CardDescription>
+            <CardTitle>상품정보 중 중요사항 변경</CardTitle>
+            <CardDescription></CardDescription>
           </div>
         </div>
       </CardHeader>

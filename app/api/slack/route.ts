@@ -191,9 +191,114 @@ export async function POST(request: NextRequest) {
           }
           break;
 
+        //
+        case 'product_info_change':
+          response = await fetch('https://slack.com/api/chat.postMessage', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${SLACK_BOT_TOKEN}`,
+            },
+            body: JSON.stringify({
+              "channel": "C08KT75PH2N", 
+              "text":"[2026-01-01] 숙소 변경 공지",
+              "blocks":[
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": ":newspaper:  상품정보 변경 안내"
+                  }
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "text": "*2026-01-01*  |  골프리조트",
+                      "type": "mrkdwn"
+                    }
+                  ]
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*호텔 수리로 인한 숙소 변경 안내*"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "코타키나발루 넥서스 리조트의 오션 파노라마 프리미어룸의 수리로 인하여 26년 1월 ~ 26년 3월 까지의 상품에 대해서 숙소 변경이 진행됩니다."
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*변경 내용*"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*기존 *`넥서스 리조트` 에서  ▶️  *변경* `사바 비치 빌라&스위츠` 로 변경"
+                  },
+                  "accessory": {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "상세 정보 확인",
+                      "emoji": true
+                    },
+                    "value": "click_me_123",
+                    "url": "https://google.com",
+                    "action_id": "show_detail_view"
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": ":pushpin: 변경 내용에 대해서 문의 사항이 있으시면 DM을 요청드립니다."
+                    }
+                  ]
+                }
+              ]
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.ok) {
+                resultsuccess = true;
+                resultMSG = "결재 알림 발송 완료";
+            } else {
+                resultsuccess = false;
+                resultMSG = `Slack API Error: ${data.error}`;
+                resultstatus = 500;
+            }
+          } else {
+            resultsuccess = false;
+            resultMSG = "Slack API Network Error";
+            resultstatus = 500;
+          }
+          break;
+
         // 2-3. 기타 기능
         case 'bulk_notification':
-        case 'product_info_change':
         case 'quote_registration':
           resultsuccess = true;
           resultMSG = "기능 준비중입니다.";

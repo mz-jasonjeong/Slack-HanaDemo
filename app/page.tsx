@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { LoginView } from "@/components/login-view"
 import { DashboardView } from "@/components/dashboard-view"
+import { AuthProvider } from "@/contexts/auth-context"
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<"login" | "dashboard">("login")
@@ -22,5 +23,10 @@ export default function Home() {
     return <LoginView onLogin={handleLogin} />
   }
 
-  return <DashboardView agencyName={selectedAgency} onLogout={handleLogout} />
+  // return <DashboardView agencyName={selectedAgency} onLogout={handleLogout} />
+  return (
+    <AuthProvider agencyName={selectedAgency}>
+      <DashboardView agencyName={selectedAgency} onLogout={handleLogout} />
+    </AuthProvider>
+  )
 }

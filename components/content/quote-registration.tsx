@@ -6,11 +6,16 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FileText, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
+
 
 export function QuoteRegistration() {
+  const { agencyName } = useAuth();
   const [formData, setFormData] = useState({
+    product: "",
     accommodationCost: "",
     airfare: "",
     foodCost: "",
@@ -34,6 +39,8 @@ export function QuoteRegistration() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "quote_registration",
+          agencyName,
+          product: formData.product,
           accommodationCost: formData.accommodationCost,
           airfare: formData.airfare,
           foodCost: formData.foodCost,
@@ -47,7 +54,7 @@ export function QuoteRegistration() {
           title: "Success",
           description: "Message Sent to Slack!",
         })
-        setFormData({ accommodationCost: "", airfare: "", foodCost: "", details: "" })
+        setFormData({ product: "", accommodationCost: "", airfare: "", foodCost: "", details: "" })
       } else {
         throw new Error("Failed to send")
       }
@@ -78,9 +85,27 @@ export function QuoteRegistration() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+      <div className="space-y-2">
+          <Label htmlFor="product">견적상품</Label>
+          <Select
+            value={formData.product}
+            onValueChange={(value) => handleChange("product", value)}
+            disabled={isLoading}
+          >
+            <SelectTrigger id="product">
+              <SelectValue placeholder="Select a product" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="a-company-teamwork">A회사 팀워크</SelectItem>
+              <SelectItem value="b-company-executive-tour">B회사 임원 연말 투어</SelectItem>
+              <SelectItem value="b-company-leader-teamwork">B회사 리더 팀워크</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-2">
-            <Label htmlFor="accommodation">Accommodation Cost</Label>
+            <Label htmlFor="accommodation">숙박비</Label>
             <Input
               id="accommodation"
               type="number"
@@ -91,7 +116,7 @@ export function QuoteRegistration() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="airfare">Airfare</Label>
+            <Label htmlFor="airfare">항공료</Label>
             <Input
               id="airfare"
               type="number"
@@ -102,7 +127,7 @@ export function QuoteRegistration() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="food">Food Cost</Label>
+            <Label htmlFor="food">식비</Label>
             <Input
               id="food"
               type="number"
@@ -114,7 +139,7 @@ export function QuoteRegistration() {
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="details">Details</Label>
+          <Label htmlFor="details">상세내용</Label>
           <Textarea
             id="details"
             placeholder="Enter additional details about the quote..."

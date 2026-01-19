@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       let response;
 
       switch(body.type){
-        // 2-1. 전자결재 도착
+        //전자결재 도착
         case 'approval_arrival':
           response = await fetch('https://slack.com/api/chat.postMessage', {
             method: 'POST',
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
           }
           break;
 
-        // 2-2. 휴가 적용
+        //휴가 적용
         case 'vacation_application':
           response = await fetch('https://slack.com/api/users.profile.set', {
             method: 'POST',
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
           }
           break;
 
-        //
+        //중요상품 변경
         case 'product_info_change':
           response = await fetch('https://slack.com/api/chat.postMessage', {
             method: 'POST',
@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
               'Authorization': `Bearer ${SLACK_BOT_TOKEN}`,
             },
             body: JSON.stringify({
-              "channel": "C08KT75PH2N", 
+              "channel": "C0A7XTA63L3", 
               "text":`*${body.title}*`,
               "blocks":[
                 {
@@ -214,11 +214,25 @@ export async function POST(request: NextRequest) {
                   "type": "divider"
                 },
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": `*${body.content}*`
-                  }
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": `*${body.title}*`
+                    }
+                  ]
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": `${body.content}`
+                    }
+                  ]
                 },
                 {
                   "type": "divider"
@@ -240,7 +254,153 @@ export async function POST(request: NextRequest) {
             const data = await response.json();
             if (data.ok) {
                 resultsuccess = true;
-                resultMSG = "결재 알림 발송 완료";
+                resultMSG = "상품 변경 발송 완료";
+            } else {
+              console.log("=========================[route > product_info_change]=========================");
+              console.log("공지 메시지 발송 실패");
+              console.log(data);
+              console.log("=========================[route > product_info_change]=========================");
+                resultsuccess = false;
+                resultMSG = `Slack API Error: ${data.error}`;
+                resultstatus = 500;
+            }
+          } else {
+            console.log("=========================[route > product_info_change]=========================");
+            console.log("공지 메시지 발송 오류");
+            console.log("=========================[route > product_info_change]=========================");
+            resultsuccess = false;
+            resultMSG = "Slack API Network Error";
+            resultstatus = 500;
+          }
+          break;
+
+        //견적 등록
+        case 'quote_registration':
+          // Col0A9GK7PPQA : 업체명 [v]
+          // Col0A9GK3SNLS : 식비
+          // name : Key [v]
+          // Col0A9GKB82DQ : 비고 [v]
+          // Col0A9A8BP97V : 숙박비
+          // Col0A9A8D0EKD : 항공료
+          // Col0AAAUGT55W : 견적상품 [v]
+          
+          // type: 'quote_registration',
+          // body.agencyName: '모두투어',
+          // body.product: 'a-company-teamwork',
+          // body.accommodationCost: '111',
+          // body.airfare: '222',
+          // body.foodCost: '333',
+          // body.total: 666,
+          // body.details: '444'
+
+          //1. 업체가 견적을 입력하면 리스트에 추가
+          response = await fetch('https://slack.com/api/slackLists.items.create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${SLACK_USER_TOKEN}`,
+            },
+            body: JSON.stringify({
+              "list_id":"F0AAAUDMWPJ",
+              "initial_fields": [
+                {
+                  "column_id": "Col0A9GK5C78S",
+                  "rich_text": [
+                    {
+                      "type": "rich_text",
+                      "elements": [
+                        {
+                          "type": "rich_text_section", 
+                          "elements": [
+                            {
+                              "type": "text",
+                              "text": `${Math.floor(new Date().getTime() / 1000)}`
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "column_id": "Col0A916B163H",
+                  "rich_text": [
+                    {
+                      "type": "rich_text",
+                      "elements": [
+                        {
+                          "type": "rich_text_section", 
+                          "elements": [
+                            {
+                              "type": "text",
+                              "text": `${body.agencyName}`
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "column_id": "Col0A9VH77673",
+                  "rich_text": [
+                    {
+                      "type": "rich_text",
+                      "elements": [
+                        {
+                          "type": "rich_text_section", 
+                          "elements": [
+                            {
+                              "type": "text",
+                              "text": `${body.product}`
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "column_id": "Col0A9GKB82DQ",
+                  "rich_text": [
+                    {
+                      "type": "rich_text",
+                      "elements": [
+                        {
+                          "type": "rich_text_section", 
+                          "elements": [
+                            {
+                              "type": "text",
+                              "text": `${body.details}`
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                    "column_id": "Col0A9EJ757C6",
+                    "number": [parseFloat(body.foodCost)]
+                },
+                {
+                    "column_id": "Col0A9L7P6RPE",
+                    "number": [parseFloat(body.accommodationCost)]
+                },
+                {
+                    "column_id": "Col0A9L7QDJA0",
+                    "number": [parseFloat(body.airfare)]
+                }
+            
+              ]
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.ok) {
+                resultsuccess = true;
+                resultMSG = "상품 변경 발송 완료";
             } else {
                 resultsuccess = false;
                 resultMSG = `Slack API Error: ${data.error}`;
@@ -251,13 +411,76 @@ export async function POST(request: NextRequest) {
             resultMSG = "Slack API Network Error";
             resultstatus = 500;
           }
+
           break;
 
-        // 2-3. 기타 기능
+        //일괄공지
         case 'bulk_notification':
-        case 'quote_registration':
-          resultsuccess = true;
-          resultMSG = "기능 준비중입니다.";
+          //임시 채널 생성
+          response = await fetch('https://slack.com/api/conversations.create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${SLACK_BOT_TOKEN}`,
+            },
+            body: JSON.stringify({
+              "name": "일괄공지_" + Math.floor(new Date().getTime() / 1000), 
+              "team_id":"T09GJB74FUM",
+              "is_private":true
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.ok) {
+              // console.log("=========================[route > bulk_notification]=========================");
+              // console.log("채널 생성 완료");
+              // console.log(data);
+              // console.log("=========================[route > bulk_notification]=========================");
+              //성공인 경우 특정 사용자 초대
+                // resultsuccess = true;
+                // resultMSG = "결재 알림 발송 완료";
+                //==================================================
+                response = await fetch('https://slack.com/api/conversations.invite', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${SLACK_BOT_TOKEN}`,
+                  },
+                  body: JSON.stringify({
+                    "channel": `${data.channel.id}`, 
+                    "users":"U09QQN9KQ65,U08KTA9HWQK,U09D0Q36J7J"
+                  }),
+                });
+      
+                if (response.ok) {
+                  const data = await response.json();
+                  if (data.ok) {
+                      resultsuccess = true;
+                      resultMSG = "채널 생성 및 초대 완료";
+                      //임시 메시지 보내기
+                      sendMessageToChannel(`${data.channel.id}`, body.message);
+                  } else {
+                      resultsuccess = false;
+                      resultMSG = `사용자 초대 Slack API Error: ${data.error}`;
+                      resultstatus = 500;
+                  }
+                } else {
+                  resultsuccess = false;
+                  resultMSG = "사용자 초대 Slack API Network Error";
+                  resultstatus = 500;
+                }
+                //==================================================
+            } else {
+                resultsuccess = false;
+                resultMSG = `채널 생성 Slack API Error: ${data.error}`;
+                resultstatus = 500;
+            }
+          } else {
+            resultsuccess = false;
+            resultMSG = "채널 생성 Slack API Network Error";
+            resultstatus = 500;
+          }
           break;
           
         default:
@@ -360,4 +583,51 @@ async function openOpinionModal(triggerId: string, docId: string) {
       }
     })
   });
+}
+
+//특정 채널에 메시지 보내기
+async function sendMessageToChannel(channelID:string, message:string){
+  let resultsuccess = false;
+  let resultMSG = "";
+
+  console.log("=========================[Start sendMessageToChannel]=========================");
+  console.log("ChannelID : " + channelID);
+  console.log("Message : " + message);
+  console.log("=========================[Start sendMessageToChannel]=========================");
+
+  const response = await fetch('https://slack.com/api/chat.postMessage', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SLACK_BOT_TOKEN}`,
+    },
+    body: JSON.stringify({
+      "channel": `${channelID}`, 
+      "text": `${message}`
+    }),
+  });
+
+  if (response.ok) {
+    const data = await response.json();
+    if (data.ok) {
+      console.log("=========================[sendMessageToChannel]=========================");
+      console.log("메시지 발송 성공");
+      console.log(data);
+      console.log("=========================[sendMessageToChannel]=========================");
+        resultsuccess = true;
+        resultMSG = "결재 알림 발송 완료";
+    } else {
+      console.log("=========================[sendMessageToChannel]=========================");
+      console.log("메시지 발송 실패");
+      console.log(data);
+      console.log("=========================[sendMessageToChannel]=========================");
+        resultsuccess = false;
+        resultMSG = `Slack API Error: ${data.error}`;
+    }
+  } else {
+    resultsuccess = false;
+    resultMSG = "Slack API Network Error";
+  }
+
+  // return {"resultsuccess":resultsuccess, "resultMSG" : resultMSG};
 }

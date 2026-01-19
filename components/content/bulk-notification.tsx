@@ -32,7 +32,10 @@ export function BulkNotification() {
         })
         setMessage("")
       } else {
-        throw new Error("Failed to send")
+        console.log("=========================[Bulk Notification 페이지]=========================");
+        console.log(response);
+        console.log("=========================[Bulk Notification 페이지]=========================");
+        throw new Error("Failed to send");
       }
     } catch (error) {
       toast({

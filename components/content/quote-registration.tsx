@@ -96,9 +96,9 @@ export function QuoteRegistration() {
               <SelectValue placeholder="Select a product" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="a-company-teamwork">A회사 팀워크</SelectItem>
+              <SelectItem value="a-company-teamwork">A회사 팀워크샵</SelectItem>
               <SelectItem value="b-company-executive-tour">B회사 임원 연말 투어</SelectItem>
-              <SelectItem value="b-company-leader-teamwork">B회사 리더 팀워크</SelectItem>
+              <SelectItem value="b-company-leader-teamwork">B회사 리더 팀워크샵</SelectItem>
             </SelectContent>
           </Select>
         </div>

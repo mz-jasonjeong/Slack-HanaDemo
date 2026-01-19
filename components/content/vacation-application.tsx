@@ -56,7 +56,7 @@ export function VacationApplication() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-muted-foreground">
-          버튼을 클릭하면 내일 23:59:59 까지 Slack의 상태 메시지가 휴가중으로 설정됩니다.
+          버튼을 클릭하면 Slack의 상태 메시지가 휴가중으로 설정됩니다.
         </p>
         <Button onClick={handleApply} disabled={isLoading}>
           {isLoading ? (

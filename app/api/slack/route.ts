@@ -71,6 +71,9 @@ export async function POST(request: NextRequest) {
       let resultsuccess = false;
       let resultstatus = 200;
       let response;
+      let listItems = [];
+      let accountCNT = 0;                     //해당 업체 수
+      let quoteRegistrationString = "";
 
       switch(body.type){
         //전자결재 도착
@@ -256,18 +259,18 @@ export async function POST(request: NextRequest) {
                 resultsuccess = true;
                 resultMSG = "상품 변경 발송 완료";
             } else {
-              console.log("=========================[route > product_info_change]=========================");
-              console.log("공지 메시지 발송 실패");
-              console.log(data);
-              console.log("=========================[route > product_info_change]=========================");
+              // console.log("=========================[route > product_info_change]=========================");
+              // console.log("공지 메시지 발송 실패");
+              // console.log(data);
+              // console.log("=========================[route > product_info_change]=========================");
                 resultsuccess = false;
                 resultMSG = `Slack API Error: ${data.error}`;
                 resultstatus = 500;
             }
           } else {
-            console.log("=========================[route > product_info_change]=========================");
-            console.log("공지 메시지 발송 오류");
-            console.log("=========================[route > product_info_change]=========================");
+            // console.log("=========================[route > product_info_change]=========================");
+            // console.log("공지 메시지 발송 오류");
+            // console.log("=========================[route > product_info_change]=========================");
             resultsuccess = false;
             resultMSG = "Slack API Network Error";
             resultstatus = 500;
@@ -400,7 +403,7 @@ export async function POST(request: NextRequest) {
             const data = await response.json();
             if (data.ok) {
                 resultsuccess = true;
-                resultMSG = "상품 변경 발송 완료";
+                resultMSG = "리스트 추가 완료";
             } else {
                 resultsuccess = false;
                 resultMSG = `Slack API Error: ${data.error}`;
@@ -411,6 +414,144 @@ export async function POST(request: NextRequest) {
             resultMSG = "Slack API Network Error";
             resultstatus = 500;
           }
+
+          //리스트의 아이템을 읽어서 2개 이상인 경우는 캔버스를 생성한다.
+          response = await fetch('https://slack.com/api/slackLists.items.list', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${SLACK_USER_TOKEN}`,
+            },
+            body: JSON.stringify({
+              "list_id":"F0AAAUDMWPJ"
+              ,"limit":"500"
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.ok) {
+              listItems = data.items;
+              resultsuccess = true;
+              resultMSG = "-";
+            } else {
+                resultsuccess = false;
+                resultMSG = `Slack API Error: ${data.error}`;
+                resultstatus = 500;
+            }
+          } else {
+            resultsuccess = false;
+            resultMSG = "Slack API Network Error";
+            resultstatus = 500;
+          }
+
+          if(listItems.length > 1){
+            let headerString = "|항목|";              //헤더 이름
+            let dividerString = "|-----------------|";        //구분선
+            let quoteItemString = "|견적상품|";       //견적상품명
+            let accommodationString = "|숙박비|";     //숙박비
+            let airfareString = "|항공료|";           //항공료
+            let foodCostString = "|식비|";            //식비
+            let descString = "|비고|";                //비고
+
+            listItems.forEach(function(item) {
+              let tempHeaderString = "";        //헤더 이름
+              let tempQuoteItemString = "";     //견적상품명
+              let tempAccommodationString = ""; //숙박비
+              let tempAirfareString = "";       //항공료
+              let tempFoodCostString = "";      //식비
+              let tempDescString = "";          //비고
+              //필드를 반복한다.
+              // fields
+              item.fields.forEach(function(itemDetail) {
+                switch(itemDetail.column_id){
+                  case "Col0A916B163H":   //업체명
+                    tempHeaderString = itemDetail.text;
+                    break;
+                  case "Col0A9EJ757C6":   //식비
+                  tempFoodCostString = itemDetail.number;
+                    break;
+                  case "Col0A9GK5C78S":   //Key
+                    break;
+                  case "Col0A9GKB82DQ":   //비고
+                  tempDescString = itemDetail.text;
+                    break;
+                  case "Col0A9L7P6RPE":   //숙박비
+                  tempAccommodationString = itemDetail.number;
+                    break;
+                  case "Col0A9L7QDJA0":   //항공료
+                  tempAirfareString = itemDetail.number;
+                    break;
+                  case "Col0A9VH77673":   //견적항목
+                  tempQuoteItemString = itemDetail.text;
+                    break;
+                }
+              });
+
+              //견적 상품이 A업체 워크샵인 경우에만 샘플로 처리하자
+              if(tempQuoteItemString === "a-company-teamwork"){
+                accountCNT++;
+                headerString += tempHeaderString + '|';
+                dividerString += "-----------------|";
+                quoteItemString += tempQuoteItemString + '|';
+                accommodationString += tempAccommodationString + '|';
+                airfareString += tempAirfareString + '|';
+                foodCostString += tempFoodCostString + '|';
+                descString += tempDescString + '|';
+              }
+
+            });
+
+            quoteRegistrationString = headerString + "\n" + dividerString + "\n" + quoteItemString + "\n" + accommodationString + "\n" + airfareString + "\n" + foodCostString + "\n" + descString;
+          }
+          /*
+          |항목|업체A|업체B|
+          |-----------|-----------------|-----------------|
+          |견적상품|A업체 워크샵|B업체 워크샵|
+          |숙박비|1,000,000|1,000,000|
+          |항공료|1,200,000|1,200,000|
+          |식비|2,500,000|2,500,000|
+          |비고|A업체 비고 입력|B업체 비고 입력|
+          */
+
+          //적용 대상의 수량이 있는 경우에만
+          if(accountCNT > 0){
+            response = await fetch('https://slack.com/api/canvases.create', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SLACK_USER_TOKEN}`,
+              },
+              body: JSON.stringify({
+                channel_id: "C08KT75PH2N",
+                title: "업체 견적 비교",
+                document_content: { 
+                  type: "markdown",
+                  markdown: quoteRegistrationString
+                }
+              })
+            });
+  
+            if (response.ok) {
+              const data = await response.json();
+              if (data.ok) {
+                  resultsuccess = true;
+                  resultMSG = "리스트 추가 완료";
+              } else {
+                  resultsuccess = false;
+                  resultMSG = `Slack API Error: ${data.error}`;
+                  resultstatus = 500;
+              }
+            } else {
+              console.log("=========================[route > quote_registration]=========================");
+              console.log("캔버스 생성 실패");
+              console.log("=========================[route > quote_registration]=========================");
+              resultsuccess = false;
+              resultMSG = "Slack API Network Error";
+              resultstatus = 500;
+            }
+          }
+
 
           break;
 

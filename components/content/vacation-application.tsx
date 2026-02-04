@@ -25,7 +25,7 @@ export function VacationApplication() {
       if (response.ok) {
         toast({
           title: "Success",
-          description: "휴가상태 적용 완료",
+          description: "Message Sent to Slack!",
         })
       } else {
         throw new Error("Failed to send")
@@ -33,7 +33,7 @@ export function VacationApplication() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "휴가상태 적용 오류",
+        description: "Failed to send",
         variant: "destructive",
       })
     } finally {
@@ -49,14 +49,14 @@ export function VacationApplication() {
             <Calendar className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <CardTitle>휴가 적용</CardTitle>
+            <CardTitle>휴가상태 적용</CardTitle>
             <CardDescription></CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-muted-foreground">
-          버튼을 클릭하면 Slack의 상태 메시지가 휴가중으로 설정됩니다.
+          근태관리 시스템에서 사용자 상태를 받아 Slack의 상태를 휴가중으로 변경
         </p>
         <Button onClick={handleApply} disabled={isLoading}>
           {isLoading ? (
@@ -65,7 +65,7 @@ export function VacationApplication() {
               Sending...
             </>
           ) : (
-            "Apply for Vacation"
+            "상태 적용"
           )}
         </Button>
       </CardContent>

@@ -49,15 +49,14 @@ export function ApprovalArrivalSend() {
             <Send className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <CardTitle>결재문서 도착 알림</CardTitle>
+            <CardTitle>전자결재 도착 발송</CardTitle>
             <CardDescription></CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-muted-foreground">
-          결재가 필요한 문서가 도착하면 Slack로 알림을 보냅니다.
-          아래 버튼을 클릭하면 Demo-Bot를 통하여 문서 도착 알림을 받을 수 있습니다.
+        전자결재 시스템에서 결재문서가 도착한 경우 결재자에게 DM을 발송, 의견등록 또는 승인/반려 처리를 진행
         </p>
         <Button onClick={handleSend} disabled={isLoading}>
           {isLoading ? (
@@ -66,7 +65,7 @@ export function ApprovalArrivalSend() {
               Sending...
             </>
           ) : (
-            "Send Approval Arrival"
+            "도착 메시지 발송"
           )}
         </Button>
       </CardContent>

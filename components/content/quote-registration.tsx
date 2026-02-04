@@ -1,19 +1,31 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FileText, Loader2 } from "lucide-react"
+import { FileText, Loader2, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 
+interface QuoteProduct {
+  channelId: string
+  channelName: string
+  title: string
+  agencyName: string
+  content?: string
+}
+
+interface QuoteItem {
+  name: string
+  desc: string
+}
 
 export function QuoteRegistration() {
-  const { agencyName } = useAuth();
+  const { agencyName } = useAuth()
   const [formData, setFormData] = useState({
     product: "",
     accommodationCost: "",
@@ -22,7 +34,29 @@ export function QuoteRegistration() {
     details: "",
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [quoteProducts, setQuoteProducts] = useState<QuoteItem[]>([])
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true)
   const { toast } = useToast()
+
+  // Fetch quote products from Slack List
+  const fetchQuoteProducts = async () => {
+    setIsLoadingProducts(true)
+    try {
+      const response = await fetch("/api/slack/quote-list")
+      const data = await response.json()
+      if (response.ok && data.quotes) {
+        setQuoteProducts(data.quotes)
+      }
+    } catch (error) {
+      console.error("Failed to fetch quote products:", error)
+    } finally {
+      setIsLoadingProducts(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchQuoteProducts()
+  }, [])
 
   const handleChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -79,30 +113,54 @@ export function QuoteRegistration() {
             <FileText className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <CardTitle>Quote Registration</CardTitle>
-            <CardDescription>견적등록 - Register a new travel quote</CardDescription>
+            <CardTitle>견적등록</CardTitle>
+            <CardDescription>대리점에서 견적상품을 선택 후 견적을 입력</CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-      <div className="space-y-2">
-          <Label htmlFor="product">견적상품</Label>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="product">견적상품</Label>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={fetchQuoteProducts}
+              disabled={isLoadingProducts}
+              className="h-6 px-2 text-xs"
+            >
+              {isLoadingProducts ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
+              <span className="ml-1">Refresh</span>
+            </Button>
+          </div>
           <Select
             value={formData.product}
             onValueChange={(value) => handleChange("product", value)}
-            disabled={isLoading}
+            disabled={isLoading || isLoadingProducts}
           >
             <SelectTrigger id="product">
-              <SelectValue placeholder="Select a product" />
+              <SelectValue placeholder={isLoadingProducts ? "Loading products..." : "Select a product"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="a-company-teamwork">A회사 팀워크샵</SelectItem>
-              <SelectItem value="b-company-executive-tour">B회사 임원 연말 투어</SelectItem>
-              <SelectItem value="b-company-leader-teamwork">B회사 리더 팀워크샵</SelectItem>
+              {quoteProducts.length === 0 ? (
+                <SelectItem value="no-products" disabled>
+                  No quote requests available
+                </SelectItem>
+              ) : (
+                quoteProducts.map((product) => (
+                  <SelectItem key={product.name} value={product.name}>
+                    {product.name}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
-      
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="accommodation">숙박비</Label>
@@ -142,7 +200,7 @@ export function QuoteRegistration() {
           <Label htmlFor="details">상세내용</Label>
           <Textarea
             id="details"
-            placeholder="Enter additional details about the quote..."
+            placeholder="내용입력"
             value={formData.details}
             onChange={(e) => handleChange("details", e.target.value)}
             rows={4}
@@ -156,7 +214,7 @@ export function QuoteRegistration() {
               Sending...
             </>
           ) : (
-            "Submit Quote"
+            "등록"
           )}
         </Button>
       </CardContent>

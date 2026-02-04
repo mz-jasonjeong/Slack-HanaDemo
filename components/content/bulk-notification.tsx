@@ -32,10 +32,7 @@ export function BulkNotification() {
         })
         setMessage("")
       } else {
-        console.log("=========================[Bulk Notification 페이지]=========================");
-        console.log(response);
-        console.log("=========================[Bulk Notification 페이지]=========================");
-        throw new Error("Failed to send");
+        throw new Error("Failed to send")
       }
     } catch (error) {
       toast({
@@ -56,17 +53,17 @@ export function BulkNotification() {
             <Bell className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <CardTitle>일괄 공지</CardTitle>
-            <CardDescription>내용을 입력하면 채널을 생성, 자동으로 사용자를 초대합니다.</CardDescription>
+            <CardTitle>일괄공지</CardTitle>
+            <CardDescription>채널 생성 후 사용자 초대 및 메시지 발송</CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="message">공지내용 입력</Label>
+          <Label htmlFor="message">공지내용</Label>
           <Textarea
             id="message"
-            placeholder="Enter your notification message..."
+            placeholder="내용 입력"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             rows={6}
@@ -80,7 +77,7 @@ export function BulkNotification() {
               Sending...
             </>
           ) : (
-            "Send Notification"
+            "발송"
           )}
         </Button>
       </CardContent>

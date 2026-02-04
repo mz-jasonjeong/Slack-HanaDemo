@@ -4,7 +4,7 @@ import type React from "react"
 
 import { cn } from "@/lib/utils"
 import type { MenuItem } from "@/components/dashboard-view"
-import { Bell, FileEdit, Send, Calendar, FileText } from "lucide-react"
+import { Bell, FileEdit, Send, Calendar, FileText, FilePlus } from "lucide-react"
 
 interface SidebarProps {
   selectedMenu: MenuItem
@@ -12,11 +12,12 @@ interface SidebarProps {
 }
 
 const menuItems: { id: MenuItem; label: string; labelKr: string; icon: React.ElementType }[] = [
-  { id: "bulk-notification", label: "일괄 공지", labelKr: "채널 생성 및 일괄 공지를 진행합니다.", icon: Bell },
-  { id: "product-info-change", label: "중요 상품 변경", labelKr: "중요한 변경 내용에 대한 알림을 발송합니다.", icon: FileEdit },
-  { id: "approval-arrival-send", label: "전자결재 도착", labelKr: "결재가 필요한 문서가 도착하면 수신되는 알림", icon: Send },
-  { id: "vacation-application", label: "휴가 적용", labelKr: "Slack 사용자 상태를 휴가중으로 설정", icon: Calendar },
-  { id: "quote-registration", label: "견적 등록", labelKr: "견적을 등록합니다", icon: FileText },
+  { id: "bulk-notification", label: "일괄공지", labelKr: "일괄공지", icon: Bell },
+  { id: "product-info-change", label: "상품정보 변경", labelKr: "상품 주요 내용이 변경된 경우", icon: FileEdit },
+  { id: "approval-arrival-send", label: "전자결재 도착 발송", labelKr: "전자결재 도착시 메시지 발송", icon: Send },
+  { id: "vacation-application", label: "휴가상태 적용", labelKr: "Slack의 휴가상태 적용", icon: Calendar },
+  { id: "quote-request", label: "견적 요청 등록", labelKr: "대리점 견적 요청 접수", icon: FilePlus },
+  { id: "quote-registration", label: "견적등록", labelKr: "대리점에서 견적등록", icon: FileText },
 ]
 
 export function Sidebar({ selectedMenu, onMenuSelect }: SidebarProps) {

@@ -57,27 +57,27 @@ export function ProductInfoChange() {
             <FileEdit className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <CardTitle>상품정보 중 중요사항 변경</CardTitle>
-            <CardDescription></CardDescription>
+            <CardTitle>상품정보 변경</CardTitle>
+            <CardDescription>상품정보 중 중요한 내용이 변경된 경우 특정 채널에 메시지 발송</CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="title">Title</Label>
+          <Label htmlFor="title">제목</Label>
           <Input
             id="title"
-            placeholder="Enter title..."
+            placeholder="제목을 입력하세요."
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             disabled={isLoading}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="content">Content</Label>
+          <Label htmlFor="content">내용</Label>
           <Textarea
             id="content"
-            placeholder="Enter content..."
+            placeholder="내용을 입력하세요."
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={6}
@@ -91,7 +91,7 @@ export function ProductInfoChange() {
               Sending...
             </>
           ) : (
-            "Send"
+            "발송"
           )}
         </Button>
       </CardContent>

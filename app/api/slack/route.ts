@@ -295,6 +295,61 @@ export async function POST(request: NextRequest) {
           // body.foodCost: '333',
           // body.total: 666,
           // body.details: '444'
+          console.log("견적 등록 진입")
+
+          // 견적상품을 먼저 조회 후 채널ID를 조회
+          const getListItemresponse = await fetch('https://slack.com/api/slackLists.items.list', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${SLACK_USER_TOKEN}`,
+            },
+            body: JSON.stringify({
+              "list_id":"F0AC4535YKV",
+            }),
+          });
+
+          // console.log(getListItemresponse.body)
+
+          let channelId = "";
+
+          if (getListItemresponse.ok) {
+            const data = await getListItemresponse.json();
+
+            console.log("==============================")
+            console.log(data.items)
+            console.log("==============================")
+
+            if (data.ok) {
+              data.items.forEach(function(listItem){
+                  let quoteName = "";
+                  let quotechID = "";
+                  listItem.fields.forEach(function(fieldItem){
+                    switch(fieldItem.column_id){
+                      case "Col0ACE4SKYKW":
+                        quoteName = fieldItem.text;
+                        break;
+                      case "Col0ACAGP9EJW":
+                        quotechID = fieldItem.value;
+                        break;
+                    }
+                  })
+                  if(quoteName === body.product)
+                    channelId = quotechID;
+                })
+
+            } else {
+                resultsuccess = false;
+                resultMSG = `Slack API Error: ${data.error}`;
+                resultstatus = 500;
+            }
+          } else {
+            resultsuccess = false;
+            resultMSG = "Slack API Network Error";
+            resultstatus = 500;
+          }
+
+          // body.product
 
           //1. 업체가 견적을 입력하면 리스트에 추가
           response = await fetch('https://slack.com/api/slackLists.items.create', {
@@ -398,7 +453,7 @@ export async function POST(request: NextRequest) {
               ]
             }),
           });
-
+          
           if (response.ok) {
             const data = await response.json();
             if (data.ok) {
@@ -414,6 +469,9 @@ export async function POST(request: NextRequest) {
             resultMSG = "Slack API Network Error";
             resultstatus = 500;
           }
+
+          
+          // console.log("Channel ID : " + channelId)
 
           //리스트의 아이템을 읽어서 2개 이상인 경우는 캔버스를 생성한다.
           response = await fetch('https://slack.com/api/slackLists.items.list', {
@@ -523,7 +581,8 @@ export async function POST(request: NextRequest) {
                 'Authorization': `Bearer ${SLACK_USER_TOKEN}`,
               },
               body: JSON.stringify({
-                channel_id: "C08KT75PH2N",
+                // channel_id: "C08KT75PH2N",
+                channel_id: channelId,
                 title: "업체 견적 비교",
                 document_content: { 
                   type: "markdown",
@@ -532,6 +591,11 @@ export async function POST(request: NextRequest) {
               })
             });
   
+            console.log("Postion5")
+            console.log("==============================")
+            console.log(response.ok)
+            console.log("==============================")
+
             if (response.ok) {
               const data = await response.json();
               if (data.ok) {

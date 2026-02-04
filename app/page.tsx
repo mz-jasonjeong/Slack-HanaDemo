@@ -23,7 +23,6 @@ export default function Home() {
     return <LoginView onLogin={handleLogin} />
   }
 
-  // return <DashboardView agencyName={selectedAgency} onLogout={handleLogout} />
   return (
     <AuthProvider agencyName={selectedAgency}>
       <DashboardView agencyName={selectedAgency} onLogout={handleLogout} />

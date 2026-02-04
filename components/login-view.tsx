@@ -9,7 +9,7 @@ interface LoginViewProps {
 }
 
 export function LoginView({ onLogin }: LoginViewProps) {
-  const agencies = ["모두투어", "NOL인터파크", "내일투어"]
+  const agencies = ["동아여행사", "MyTrip", "기가여행사"]
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -18,8 +18,8 @@ export function LoginView({ onLogin }: LoginViewProps) {
           <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
             <Building2 className="w-8 h-8 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-bold text-foreground">하나투어 데모</CardTitle>
-          <p className="text-muted-foreground text-sm">로그인 대상 선택</p>
+          <CardTitle className="text-2xl font-bold text-foreground">여행사 견적 포탈</CardTitle>
+          <p className="text-muted-foreground text-sm"></p>
         </CardHeader>
         <CardContent className="space-y-3 pt-4">
           {agencies.map((agency) => (

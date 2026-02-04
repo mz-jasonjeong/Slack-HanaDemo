@@ -8,6 +8,7 @@ import { ProductInfoChange } from "@/components/content/product-info-change"
 import { ApprovalArrivalSend } from "@/components/content/approval-arrival-send"
 import { VacationApplication } from "@/components/content/vacation-application"
 import { QuoteRegistration } from "@/components/content/quote-registration"
+import { QuoteRequest } from "@/components/content/quote-request"
 import { LogOut, Building2 } from "lucide-react"
 
 interface DashboardViewProps {
@@ -20,6 +21,7 @@ export type MenuItem =
   | "product-info-change"
   | "approval-arrival-send"
   | "vacation-application"
+  | "quote-request"
   | "quote-registration"
 
 export function DashboardView({ agencyName, onLogout }: DashboardViewProps) {
@@ -35,6 +37,8 @@ export function DashboardView({ agencyName, onLogout }: DashboardViewProps) {
         return <ApprovalArrivalSend />
       case "vacation-application":
         return <VacationApplication />
+      case "quote-request":
+        return <QuoteRequest />
       case "quote-registration":
         return <QuoteRegistration />
       default:

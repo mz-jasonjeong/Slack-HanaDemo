@@ -14,6 +14,8 @@ export async function POST(request: NextRequest) {
     // [PART 1] Slack 인터랙션 처리 (버튼 클릭, 모달 제출 등)
     // Content-Type: application/x-www-form-urlencoded
     // =================================================================================
+
+    
     if (contentType.includes('application/x-www-form-urlencoded')) {
       const formData = await request.formData();
       const payloadString = formData.get('payload');

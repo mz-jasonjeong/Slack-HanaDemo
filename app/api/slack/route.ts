@@ -5,6 +5,20 @@ import dayjs from 'dayjs';
 const SLACK_BOT_TOKEN = process.env.OAUTH_TOKEN;
 const SLACK_USER_TOKEN = process.env.USER_TOKEN;
 
+interface PartnerQuotItemList {
+  partnerName: string;
+  accommodation: number;
+  airfare: number;
+  foodCost: number;
+  desc: string;
+}
+
+interface PartnerQuotItem {
+  name: string;
+  list: PartnerQuotItemList[];
+}
+
+
 export async function POST(request: NextRequest) {
   try {
     // 요청의 Content-Type 확인
@@ -15,7 +29,7 @@ export async function POST(request: NextRequest) {
     // Content-Type: application/x-www-form-urlencoded
     // =================================================================================
 
-    
+
     if (contentType.includes('application/x-www-form-urlencoded')) {
       const formData = await request.formData();
       const payloadString = formData.get('payload');
@@ -472,10 +486,11 @@ export async function POST(request: NextRequest) {
             resultstatus = 500;
           }
 
-          
-          // console.log("Channel ID : " + channelId)
+          //리스트를 돌면서 값은 항목끼리 묶는다.
+          let pqitemList: PartnerQuotItem[] = [];//업체 견적이 들어갈 배열
+          //PartnerQuotItem PartnerQuotItemList
 
-          //리스트의 아이템을 읽어서 2개 이상인 경우는 캔버스를 생성한다.
+          //업체견적 리스트 조회
           response = await fetch('https://slack.com/api/slackLists.items.list', {
             method: 'POST',
             headers: {
@@ -505,15 +520,7 @@ export async function POST(request: NextRequest) {
             resultstatus = 500;
           }
 
-          if(listItems.length > 1){
-            let headerString = "|항목|";              //헤더 이름
-            let dividerString = "|-----------------|";        //구분선
-            let quoteItemString = "|견적상품|";       //견적상품명
-            let accommodationString = "|숙박비|";     //숙박비
-            let airfareString = "|항공료|";           //항공료
-            let foodCostString = "|식비|";            //식비
-            let descString = "|비고|";                //비고
-
+          if(listItems.length > 0){
             listItems.forEach(function(item) {
               let tempHeaderString = "";        //헤더 이름
               let tempQuoteItemString = "";     //견적상품명
@@ -548,76 +555,84 @@ export async function POST(request: NextRequest) {
                 }
               });
 
-              //견적 상품이 A업체 워크샵인 경우에만 샘플로 처리하자
-              if(tempQuoteItemString === "a-company-teamwork"){
-                accountCNT++;
-                headerString += tempHeaderString + '|';
+              // let pqitemList: PartnerQuotItem[] = [];//업체 견적이 들어갈 배열
+              //PartnerQuotItem PartnerQuotItemList
+              // 같은 견적 요청 항목이 있는지 체크
+              const compartItem = pqitemList.find(item => item.name === tempQuoteItemString);
+              //항목이 없으면
+              if(!compartItem){
+                pqitemList.push({
+                  name : tempQuoteItemString,
+                  list : [
+                    {
+                      partnerName : tempHeaderString,
+                      accommodation :  Number(tempAccommodationString),
+                      airfare : Number(tempAirfareString),
+                      foodCost : Number(tempFoodCostString),
+                      desc : tempDescString
+                    }
+                  ]
+                })
+              }
+              else{
+                pqitemList.find(item => item.name === tempQuoteItemString).list.push(
+                  {
+                    partnerName : tempHeaderString,
+                    accommodation :  Number(tempAccommodationString),
+                    airfare : Number(tempAirfareString),
+                    foodCost : Number(tempFoodCostString),
+                    desc : tempDescString
+                  }
+                )
+              }
+
+            });
+          }
+
+          let qtrList: getQuoteRequestItem[] = [];
+          qtrList = await getQuoteRequestItemList();
+
+          let canvasContent = {
+            "type":"doc",
+            "content":[]
+          };
+
+          //등록된 견적 항목의 수량이 2개 이상인 대상을 찾는다.
+          pqitemList.forEach(function(pqItem){
+            //견적 항목에 등록된 업체 견적이 2건 이상이라면?
+            
+            if(pqItem.list.length > 1){
+              //#region 1. 대리점 견적 요청 항목 리스트에서 대상 채널 조회
+              let targetChannelID = qtrList.find(item => item.Name === pqItem.name).ChannelID;//대상 채널 ID
+              //#endregion
+
+              //#region 2. 대리점에서 등록한 견적 항목을 정리한다
+              let headerString = "|항목|";              //헤더 이름
+              let dividerString = "|-----------------|";        //구분선
+              // let quoteItemString = "|견적상품|";       //견적상품명
+              let accommodationString = "|숙박비|";     //숙박비
+              let airfareString = "|항공료|";           //항공료
+              let foodCostString = "|식비|";            //식비
+              let descString = "|비고|";                //비고
+
+              pqItem.list.forEach(function(listITem){
+                headerString += listITem.partnerName + '|';
                 dividerString += "-----------------|";
-                quoteItemString += tempQuoteItemString + '|';
-                accommodationString += tempAccommodationString + '|';
-                airfareString += tempAirfareString + '|';
-                foodCostString += tempFoodCostString + '|';
-                descString += tempDescString + '|';
-              }
-
-            });
-
-            quoteRegistrationString = headerString + "\n" + dividerString + "\n" + quoteItemString + "\n" + accommodationString + "\n" + airfareString + "\n" + foodCostString + "\n" + descString;
-          }
-          /*
-          |항목|업체A|업체B|
-          |-----------|-----------------|-----------------|
-          |견적상품|A업체 워크샵|B업체 워크샵|
-          |숙박비|1,000,000|1,000,000|
-          |항공료|1,200,000|1,200,000|
-          |식비|2,500,000|2,500,000|
-          |비고|A업체 비고 입력|B업체 비고 입력|
-          */
-
-          //적용 대상의 수량이 있는 경우에만
-          if(accountCNT > 0){
-            response = await fetch('https://slack.com/api/canvases.create', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${SLACK_USER_TOKEN}`,
-              },
-              body: JSON.stringify({
-                // channel_id: "C08KT75PH2N",
-                channel_id: channelId,
-                title: "업체 견적 비교",
-                document_content: { 
-                  type: "markdown",
-                  markdown: quoteRegistrationString
-                }
+                accommodationString += listITem.accommodation + '|';
+                airfareString += listITem.airfare + '|';
+                foodCostString += listITem.foodCost + '|';
+                descString += listITem.desc + '|';
               })
-            });
-  
-            console.log("Postion5")
-            console.log("==============================")
-            console.log(response.ok)
-            console.log("==============================")
+              //#endregion
 
-            if (response.ok) {
-              const data = await response.json();
-              if (data.ok) {
-                  resultsuccess = true;
-                  resultMSG = "리스트 추가 완료";
-              } else {
-                  resultsuccess = false;
-                  resultMSG = `Slack API Error: ${data.error}`;
-                  resultstatus = 500;
-              }
-            } else {
-              console.log("=========================[route > quote_registration]=========================");
-              console.log("캔버스 생성 실패");
-              console.log("=========================[route > quote_registration]=========================");
-              resultsuccess = false;
-              resultMSG = "Slack API Network Error";
-              resultstatus = 500;
+              //#region 3. 정리된 내용을 해당 채널에 캔버스로 생성
+              quoteRegistrationString = headerString + "\n" + dividerString + "\n" + accommodationString + "\n" + airfareString + "\n" + foodCostString + "\n" + descString;
+
+              createCanvasToChannel(targetChannelID, quoteRegistrationString);
+              //#endregion
+
             }
-          }
-
+          })
 
           break;
 
@@ -828,6 +843,100 @@ async function sendMessageToChannel(channelID:string, message:string){
       console.log("메시지 발송 실패");
       console.log(data);
       console.log("=========================[sendMessageToChannel]=========================");
+        resultsuccess = false;
+        resultMSG = `Slack API Error: ${data.error}`;
+    }
+  } else {
+    resultsuccess = false;
+    resultMSG = "Slack API Network Error";
+  }
+
+  // return {"resultsuccess":resultsuccess, "resultMSG" : resultMSG};
+}
+
+
+interface getQuoteRequestItem {
+  Name: string;
+  ChannelID: string;
+}
+//대리점 견적 요청 항목 가져오기
+async function getQuoteRequestItemList() {
+  let result: getQuoteRequestItem[] = [];
+
+  const response = await fetch("https://slack.com/api/slackLists.items.list", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${SLACK_USER_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      "list_id":"F0AC4535YKV",
+      "limit":"500"
+    }),
+  })
+
+  const data = await response.json()
+
+  if (!data.ok) {
+    console.error("Failed to fetch channels:", data.error)
+    return [];
+  }
+
+  // Filter channels that are quote channels and extract quote data from purpose
+  const quoteItems = data.items
+  let targetItems = [];
+
+  quoteItems.forEach(function(quoteItem) {
+    let quoteName = "";
+    let channelid = "";
+    quoteItem.fields.forEach(function(fieldItem) {
+        switch(fieldItem.column_id){
+          //이름
+          case "Col0ACE4SKYKW":
+            quoteName = fieldItem.text;
+            break;
+          //채널 ID
+          case "Col0ACAGP9EJW":
+            channelid = fieldItem.value;
+            break;
+        }
+    })
+
+    result.push({Name:quoteName, ChannelID:channelid});
+  })
+
+  return result;
+}
+
+//채널에 캔버스 생성
+async function createCanvasToChannel(channelID:string, content:string){
+  let resultsuccess = false;
+  let resultMSG = "";
+
+    const response = await fetch('https://slack.com/api/conversations.canvases.create', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Authorization': `Bearer ${SLACK_USER_TOKEN}`,
+    },
+    body: JSON.stringify({
+      channel_id: channelID,
+      title: "업체 견적 비교",
+      document_content: { 
+        type: "markdown",
+        markdown: content
+      }
+    })
+  });
+
+
+  if (response.ok) {
+    const data = await response.json();
+
+    if (data.ok) {
+        resultsuccess = true;
+        resultMSG = "결재 알림 발송 완료";
+    } else {
         resultsuccess = false;
         resultMSG = `Slack API Error: ${data.error}`;
     }

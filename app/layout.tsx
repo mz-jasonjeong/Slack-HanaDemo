@@ -9,7 +9,7 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Travel Agency Partner Portal",
+  title: "하나투어 Demo",
   description: "B2B Travel Agency Management Dashboard",
   generator: "v0.app",
   icons: {

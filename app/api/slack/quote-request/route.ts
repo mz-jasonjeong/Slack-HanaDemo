@@ -162,16 +162,28 @@ export async function POST(request: Request) {
     // let canvasStringR1 = `|견적명|${title}|`;
     // let canvasStringR2 = `|견적상세|${content}|`;
 
-    let canvasStringR1 = "|견적명|" + title + "|";
-    let canvasStringR2 = "|견적상세|" + content + "|";
+    let canvasString = "";
+    let headerString = "|항목|내용|";              //헤더 이름
+    let dividerString = "|-----------------|-----------------|";        //구분선
+    let canvasStringR1 = `|견적명|${title}|`;
+    let canvasStringR2 = `|견적상세|${content}|`;
 
-    const canvasResult = await slackApiByUser("conversations.canvases.create", {
-      title: "견적 요청 상세 내용",
-      channel_id: channelId,
-      document_content: {
-        type: "markdown",
-        markdown: canvasStringR1 + "\n" + canvasStringR2,
+    canvasString += headerString + "\n" + dividerString + "\n" + canvasStringR1 + "\n" + canvasStringR2;
+
+    const response = await fetch('https://slack.com/api/conversations.canvases.create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Authorization': `Bearer ${SLACK_USER_TOKEN}`,
       },
+      body: JSON.stringify({
+        channel_id: channelId,
+        title: "견적 요청 상세 내용",
+        document_content: { 
+          type: "markdown",
+          markdown: canvasString
+        }
+      })
     })
 
     // console.log("==============================")

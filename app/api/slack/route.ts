@@ -541,7 +541,7 @@ export async function POST(request: NextRequest) {
                   case "Col0A9GK5C78S":   //Key
                     break;
                   case "Col0A9GKB82DQ":   //비고
-                  tempDescString = itemDetail.text;
+                  tempDescString = itemDetail.text.replaceAll("\n", "<br>");
                     break;
                   case "Col0A9L7P6RPE":   //숙박비
                   tempAccommodationString = itemDetail.number;

@@ -168,7 +168,11 @@ export async function POST(request: Request) {
     let canvasStringR1 = `|견적명|${title}|`;
     let canvasStringR2 = `|견적상세|${content}|`;
 
-    canvasString += headerString + "\n" + dividerString + "\n" + canvasStringR1 + "\n" + canvasStringR2;
+    canvasString += headerString + "\n" + dividerString + "\n" + canvasStringR1 + "\n" + canvasStringR2.replaceAll("\n", "<br>");
+
+    console.log("==============================");
+    console.log(canvasString);
+    console.log("==============================");
 
     const response = await fetch('https://slack.com/api/conversations.canvases.create', {
       method: 'POST',
